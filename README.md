@@ -17,5 +17,6 @@
 | `difficulty_idx`| 难度序数(5为Master 以此类推) |
 | `rate`| 切片后的播放速率(float) |
 | `repeat_count`| 切片后的重复次数(int) |
+| `offset`| 音频的偏移量(float) |
 
 运行后会在谱面目录产生一个新的文件夹名为 segment_rate 里面包含新的majdata.txt和track.mp3，不包含bg.png或bg.jpg
