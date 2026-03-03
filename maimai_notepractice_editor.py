@@ -93,7 +93,7 @@ class chartsManager:
         return header + ",".join(segment_beats) + ",E"
 
     @staticmethod
-    def slice_audio_track(input_path,folder_path, start_time_sec, end_time_sec, output_filename="track_segment.mp3", rate=1.0):
+    def slice_audio_track(input_path,folder_path, start_time_sec, end_time_sec, output_filename="track_segment.mp3", rate=1.0, repeat_count=1):
         if not os.path.exists(input_path):
             print(f"错误: 找不到音频文件 {input_path}")
             return
@@ -107,6 +107,7 @@ class chartsManager:
         print(f"正在切分音频: {start_time_sec}s -> {end_time_sec}s")
         segment = audio[start_ms:end_ms]
         final_audio = chartsManager.apply_speed_to_audio(segment, rate)
+        final_audio = final_audio * repeat_count
 
         output_path = os.path.join(f"{folder_path}/segment_rate", output_filename)
         final_audio.export(output_path, format="mp3", bitrate="192k")
@@ -115,7 +116,7 @@ class chartsManager:
         return output_path
 
     @staticmethod
-    def export_maimai_slice(folder_path, start_time, end_time, difficulty_idx=5, rate=1.0):
+    def export_maimai_slice(folder_path, start_time, end_time, difficulty_idx=5, rate=1.0, repeat_count=1):
         export_path = f"{folder_path}/segment_rate"
         os.makedirs(export_path, exist_ok=True)
         # 解析原谱面
@@ -129,17 +130,21 @@ class chartsManager:
 
         # 切分谱面字符串
         sliced_chart = chartsManager.get_chart_segment_pro(full_chart, start_time, end_time, initial_bpm=int(start_bpm))
-        final_chart = chartsManager.modify_chart_speed(sliced_chart, rate)
+        # 按次数拼接谱面
+        if sliced_chart.endswith(",E"):
+            sliced_chart = sliced_chart[:-2]
+        repeated_chart = ",".join([sliced_chart] * repeat_count)
+        final_chart = chartsManager.modify_chart_speed(repeated_chart, rate)
 
         # 切分音频
-        chartsManager.slice_audio_track(os.path.join(folder_path, 'track.mp3'),folder_path, start_time, end_time, "track.mp3", rate=rate)
+        chartsManager.slice_audio_track(os.path.join(folder_path, 'track.mp3'),folder_path, start_time, end_time, "track.mp3", rate=rate, repeat_count=repeat_count)
 
         # 生成新的 maidata.txt
         new_maidata_content = (
             f"&title={data['metadata'].get('title', 'Unknown')}_segment_{rate}Speed\n"
             f"&artist={data['metadata'].get('artist', 'Unknown')}\n"
             f"&wholebpm={int(start_bpm*rate)}\n"
-            f"&inote_{difficulty_idx}=\n{final_chart}\n"
+            f"&inote_{difficulty_idx}=\n{final_chart}\n,E"
         )
 
         with open(os.path.join(export_path, 'maidata.txt'), 'w', encoding='utf-8') as f:
@@ -164,4 +169,4 @@ class chartsManager:
         return new_audio.set_frame_rate(audio_segment.frame_rate)
 
 if __name__ == '__main__':
-    chartsManager.export_maimai_slice(fr"{assestPath}/11394_WORLDSENDLONELINESS_DX", 80, 130,rate=0.8)
+    chartsManager.export_maimai_slice(fr"{assestPath}/11394_WORLDSENDLONELINESS_DX", 80, 130,rate=0.8, repeat_count=3)
